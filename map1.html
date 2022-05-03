@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>covid-19 rates</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.js"></script>
+    <style>
+        /* responsible for the font*/
+        h2, h3 {
+            margin: 10px;
+            font-size: 18px;
+        }
+        h3 {
+            font-size: 16px;
+        }
+        p {
+            margin: 10px;
+        }
+
+        /* Responsible for the map design */
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Reesponsible for objects that go over the map, like legend and title box */
+        .map-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-style: solid;
+            border-width: 1px;
+            border-color: rgba(0, 0, 0, 0.2);
+            margin-left: 20px;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+            border-radius: 3px;
+        }
+
+        /* Responsible for the map features */
+        #features {
+            top: 0;
+            height: 100px;
+            margin-top: 20px;
+            width: 250px;
+        }
+
+        /* Responsible for the legend design */
+        #legend {
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 18px;
+            height: 155px;
+            margin-bottom: 40px;
+            width: 150px;
+        }
+
+        /* Responsilbe for the keys on the legend*/
+        .legend-key {
+            display: inline-block;
+            border-radius: 20%;
+            width: 10px;
+            height: 10px;
+            margin-right: 5px;
+        }
+
+        /* This changes the computer's cursor */
+        .mapboxgl-canvas-container.mapboxgl-interactive,
+        .mapboxgl-ctrl-group button.mapboxgl-ctrl-compass {
+        cursor: unset;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class='map-overlay' id='features'>
+        <h2>US Covid Rates 2020</h2>
+        <div id='text-description'>
+            <p>Hover over a county to view county name and rate</p>
+        </div>
+    </div>
+    <div class='map-overlay' id='legend'></div>
+    <script>
+
+        //This code creates the style of the map, center point and 
+        //how zoomed in it should be.
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+        const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/light-v10',
+                zoom: 4,
+                center: [-100, 40]
+            });
+
+         //load data to the map as new layers.
+         map.on('load', () => {
+
+            //This code reads in the data.
+            map.addSource('covid', {
+                type: 'geojson',
+                data: 'assets/us-covid-2020-rates.geojson'
+            });
+
+            //This code colors each county based on the covid rate
+            map.addLayer({
+                'id': 'covid-layer',
+                'type': 'fill',
+                'source': 'covid',
+                'paint': {
+                    'fill-color': [
+                        'step',
+                        ['get', 'rates'],
+                        '#FED976', 
+                        20,          
+                        '#FEB24C',   
+                        40,          
+                        '#FC4E2A',   
+                        60,        
+                        '#BD0026',  
+                        80,        
+                        "#800026"    
+                    ],
+                        'fill-outline-color': '#BBBBBB',
+                        'fill-opacity': 0.9,
+                }
+            });
+
+            //This code allows you to hover over the map and it will provide 
+            //the county name and the covid rate in the box on the top right.
+            map.on('mousemove', ({point}) => {
+                const state = map.queryRenderedFeatures(point, {
+                    layers: ['covid-layer']
+                });
+                document.getElementById('text-description').innerHTML = state.length ?
+                    `<strong>${state[0].properties.county} county has covid a rate of ${state[0].properties.rates}%</strong>`:
+                            `<p>Hover over a county to view county name and rate</p>`;
+            });
+        });
+
+        //This stores the values that corspond to the color
+        const layers = [
+            '0% - 20%',
+            '20% - 40%',
+            '40% - 60%',
+            '60% - 80%',
+            '80% - 100%'
+        ];
+
+        //This stores the colors.
+        const colors = [
+            '#FED97670',
+            '#FEB24C70',
+            '#FC4E2A70',
+            '#BD002670',
+            '#80002670'
+        ];
+
+        //This code is responsible to create a legend for the map with the 
+        //colors and corspoinding values. It will also inlcude a link for the source.
+        const legend = document.getElementById('legend');
+        const source ='<p style="text-align: bottom; font-size:10pt">Source: <a href="https://github.com/nytimes/covid-19-data/blob/43d32dde2f87bd4dafbb7d23f5d9e878124018b8/live/us-counties.csv">NYT</a></p>';
+
+        legend.innerHTML = 'Covid Rate per County' + source;
+
+        layers.forEach((layer, i) => {
+            const color = colors[i];
+            const item = document.createElement('div');
+            const key = document.createElement('span');
+            key.className = 'legend-key';
+            key.style.backgroundColor = color;
+
+            const value = document.createElement('span');
+            value.innerHTML = `${layer}`;
+            item.appendChild(key);
+            item.appendChild(value);
+            legend.appendChild(item);
+        });
+    </script>
+</body>
+
+</html>
